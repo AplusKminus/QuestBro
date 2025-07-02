@@ -199,6 +199,7 @@ fun CategorizedGoalsList(
     val directlyAchievable = analyzedGoals.filter { it.achievability == GoalAchievability.DIRECTLY_ACHIEVABLE }
     val achievable = analyzedGoals.filter { it.achievability == GoalAchievability.ACHIEVABLE }
     val unachievable = analyzedGoals.filter { it.achievability == GoalAchievability.UNACHIEVABLE }
+    val completed = analyzedGoals.filter { it.achievability == GoalAchievability.COMPLETED }
     
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -247,6 +248,21 @@ fun CategorizedGoalsList(
                 )
             }
         }
+        
+        if (completed.isNotEmpty()) {
+            item {
+                GoalCategoryHeader(
+                    title = "Completed (${completed.size})",
+                    color = Color(0xFF4CAF50) // Green color
+                )
+            }
+            items(completed) { analyzedGoal ->
+                AnalyzedGoalCard(
+                    analyzedGoal = analyzedGoal,
+                    onRemoveGoal = onRemoveGoal
+                )
+            }
+        }
     }
 }
 
@@ -270,6 +286,7 @@ fun AnalyzedGoalCard(
         GoalAchievability.DIRECTLY_ACHIEVABLE -> MaterialTheme.colorScheme.primary
         GoalAchievability.ACHIEVABLE -> MaterialTheme.colorScheme.secondary
         GoalAchievability.UNACHIEVABLE -> MaterialTheme.colorScheme.error
+        GoalAchievability.COMPLETED -> Color(0xFF4CAF50) // Green color
     }
     
     Card(
@@ -279,6 +296,7 @@ fun AnalyzedGoalCard(
                 GoalAchievability.DIRECTLY_ACHIEVABLE -> MaterialTheme.colorScheme.primaryContainer
                 GoalAchievability.ACHIEVABLE -> MaterialTheme.colorScheme.secondaryContainer
                 GoalAchievability.UNACHIEVABLE -> MaterialTheme.colorScheme.errorContainer
+                GoalAchievability.COMPLETED -> Color(0xFFE8F5E8) // Light green background
             }
         ),
         border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
@@ -312,6 +330,15 @@ fun AnalyzedGoalCard(
                         text = "Unachievable",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error
+                    )
+                }
+                
+                // Show completed status
+                if (analyzedGoal.achievability == GoalAchievability.COMPLETED) {
+                    Text(
+                        text = "Completed",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF4CAF50) // Green color
                     )
                 }
             }

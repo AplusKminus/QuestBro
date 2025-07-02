@@ -3,7 +3,8 @@ package com.questbro.domain
 enum class GoalAchievability {
     DIRECTLY_ACHIEVABLE,  // Can be completed with currently available actions
     ACHIEVABLE,          // Can still be achieved, but requires completing other actions first
-    UNACHIEVABLE        // Cannot be achieved in this run (preconditions permanently blocked)
+    UNACHIEVABLE,        // Cannot be achieved in this run (preconditions permanently blocked)
+    COMPLETED            // Goal has been completed (target action was executed)
 }
 
 data class AnalyzedGoal(
@@ -46,7 +47,7 @@ class GoalAnalyzer(private val preconditionEngine: PreconditionEngine) {
         
         // Already completed
         if (completedActions.contains(goal.targetId)) {
-            return AnalyzedGoal(goal, GoalAchievability.DIRECTLY_ACHIEVABLE)
+            return AnalyzedGoal(goal, GoalAchievability.COMPLETED)
         }
         
         // Check if directly achievable (preconditions met)

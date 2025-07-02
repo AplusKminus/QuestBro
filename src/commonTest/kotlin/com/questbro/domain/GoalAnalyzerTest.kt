@@ -154,7 +154,7 @@ class GoalAnalyzerTest {
         val analyzedGoals = goalAnalyzer.analyzeGoals(testGameData, gameRun)
         
         assertEquals(1, analyzedGoals.size)
-        assertEquals(GoalAchievability.DIRECTLY_ACHIEVABLE, analyzedGoals[0].achievability)
+        assertEquals(GoalAchievability.COMPLETED, analyzedGoals[0].achievability)
     }
     
     @Test
@@ -235,7 +235,7 @@ class GoalAnalyzerTest {
         val analyzedGoals = goalAnalyzer.analyzeGoals(testGameData, gameRun)
         
         assertEquals(1, analyzedGoals.size)
-        assertEquals(GoalAchievability.DIRECTLY_ACHIEVABLE, analyzedGoals[0].achievability)
+        assertEquals(GoalAchievability.COMPLETED, analyzedGoals[0].achievability)
     }
     
     @Test
@@ -340,10 +340,10 @@ class GoalAnalyzerTest {
         
         val analyzedGoals2 = goalAnalyzer.analyzeGoals(conflictingGameData, gameRun2)
         
-        // First goal (assist_millicent) should be directly achievable (already completed)
+        // First goal (assist_millicent) should be completed (already completed)
         val millicent_goal = analyzedGoals2.find { it.goal.targetId == "assist_millicent" }
         assertNotNull(millicent_goal)
-        assertEquals(GoalAchievability.DIRECTLY_ACHIEVABLE, millicent_goal.achievability)
+        assertEquals(GoalAchievability.COMPLETED, millicent_goal.achievability)
         
         // Second goal (assist_sisters) should be unachievable due to the conflict
         val sisters_goal = analyzedGoals2.find { it.goal.targetId == "assist_sisters" }
