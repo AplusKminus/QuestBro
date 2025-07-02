@@ -24,6 +24,8 @@ fun QuestBroApp() {
     var gameRun by remember { mutableStateOf<GameRun?>(null) }
     var actionAnalyses by remember { mutableStateOf<List<ActionAnalysis>>(emptyList()) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var showNewRunDialog by remember { mutableStateOf(false) }
+    var newRunName by remember { mutableStateOf("") }
     
     fun refreshAnalyses() {
         val data = gameData
@@ -43,10 +45,23 @@ fun QuestBroApp() {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Header
-            Text(
-                text = "QuestBro - RPG Navigation System",
-                style = MaterialTheme.typography.headlineMedium
-            )
+            Column {
+                Text(
+                    text = "QuestBro - RPG Navigation System",
+                    style = MaterialTheme.typography.headlineMedium
+                )
+                
+                // Show current game and run info
+                val currentGame = gameData
+                val currentRun = gameRun
+                if (currentGame != null && currentRun != null) {
+                    Text(
+                        text = "${currentGame.name} - ${currentRun.runName}",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
             
             // File controls
             Row(
@@ -90,9 +105,9 @@ fun QuestBroApp() {
                 
                 Button(
                     onClick = {
-                        val data = gameData
-                        if (data != null) {
-                            gameRun = gameRepository.createNewRun(data, "New Run")
+                        if (gameData != null) {
+                            newRunName = ""
+                            showNewRunDialog = true
                         }
                     },
                     enabled = gameData != null
@@ -181,6 +196,66 @@ fun QuestBroApp() {
                     )
                 }
             }
+            
+            // New Run Dialog
+            if (showNewRunDialog) {
+                NewRunDialog(
+                    currentRunName = newRunName,
+                    onRunNameChange = { newRunName = it },
+                    onConfirm = {
+                        val data = gameData
+                        if (data != null && newRunName.isNotBlank()) {
+                            gameRun = gameRepository.createNewRun(data, newRunName.trim())
+                            showNewRunDialog = false
+                        }
+                    },
+                    onDismiss = { showNewRunDialog = false }
+                )
+            }
         }
     }
+}
+
+@Composable
+fun NewRunDialog(
+    currentRunName: String,
+    onRunNameChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Create New Run")
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Enter a name for your new playthrough:",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                OutlinedTextField(
+                    value = currentRunName,
+                    onValueChange = onRunNameChange,
+                    label = { Text("Run Name") },
+                    placeholder = { Text("e.g., First Playthrough, Mage Build, 100% Completion") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = currentRunName.isNotBlank()
+            ) {
+                Text("Create")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
