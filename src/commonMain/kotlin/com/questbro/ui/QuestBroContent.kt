@@ -98,7 +98,9 @@ fun QuestBroContent(
                     }
                 }
                 
-                LazyColumn {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     if (showCompleted) {
                         // Show completed actions with undo option
                         items(actionAnalyses.filter { gameRun.completedActions.contains(it.action.id) }) { analysis ->
