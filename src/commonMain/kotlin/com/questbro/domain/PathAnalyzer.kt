@@ -68,8 +68,106 @@ class PathAnalyzer(private val preconditionEngine: PreconditionEngine) {
         inventory: Set<String>
     ): Boolean {
         val targetAction = gameData.actions[goal.targetId] ?: return false
-        return completedActions.contains(goal.targetId) || 
-               preconditionEngine.evaluate(targetAction.preconditions, completedActions, inventory)
+        
+        // Already completed - goal is achieved
+        if (completedActions.contains(goal.targetId)) {
+            return true
+        }
+        
+        // Use deep achievability analysis to check if target action can be reached
+        return isActionAchievable(gameData, targetAction, completedActions, inventory)
+    }
+    
+    /**
+     * Deep achievability analysis using DAG traversal with memoization
+     * Checks if an action can be completed given current state and constraints
+     */
+    private fun isActionAchievable(
+        gameData: GameData,
+        targetAction: GameAction,
+        completedActions: Set<String>,
+        inventory: Set<String>,
+        visited: Set<String> = emptySet()
+    ): Boolean {
+        // Prevent infinite recursion (shouldn't happen in DAG, but safety check)
+        if (visited.contains(targetAction.id)) {
+            return false
+        }
+        
+        // Already completed
+        if (completedActions.contains(targetAction.id)) {
+            return true
+        }
+        
+        // Evaluate preconditions recursively
+        return evaluatePreconditionAchievability(
+            targetAction.preconditions,
+            gameData,
+            completedActions,
+            inventory,
+            visited + targetAction.id
+        )
+    }
+    
+    private fun evaluatePreconditionAchievability(
+        expression: PreconditionExpression,
+        gameData: GameData,
+        completedActions: Set<String>,
+        inventory: Set<String>,
+        visited: Set<String>
+    ): Boolean {
+        return when (expression) {
+            is PreconditionExpression.Always -> true
+            
+            is PreconditionExpression.ActionRequired -> {
+                val requiredAction = gameData.actions[expression.actionId] ?: return false
+                isActionAchievable(gameData, requiredAction, completedActions, inventory, visited)
+            }
+            
+            is PreconditionExpression.ActionForbidden -> {
+                // Cannot be achieved if the forbidden action is already completed
+                !completedActions.contains(expression.actionId)
+            }
+            
+            is PreconditionExpression.ItemRequired -> {
+                // Check if item is in inventory or can be obtained
+                inventory.contains(expression.itemId) || 
+                canObtainItem(gameData, expression.itemId, completedActions, inventory, visited)
+            }
+            
+            is PreconditionExpression.And -> {
+                // All conditions must be achievable
+                expression.expressions.all { subExpression ->
+                    evaluatePreconditionAchievability(subExpression, gameData, completedActions, inventory, visited)
+                }
+            }
+            
+            is PreconditionExpression.Or -> {
+                // At least one condition must be achievable
+                expression.expressions.any { subExpression ->
+                    evaluatePreconditionAchievability(subExpression, gameData, completedActions, inventory, visited)
+                }
+            }
+        }
+    }
+    
+    private fun canObtainItem(
+        gameData: GameData,
+        itemId: String,
+        completedActions: Set<String>,
+        inventory: Set<String>,
+        visited: Set<String>
+    ): Boolean {
+        // Find all actions that provide this item
+        val providingActions = gameData.actions.values.filter { action ->
+            action.rewards.any { it.itemId == itemId }
+        }
+        
+        // Check if any providing action is achievable
+        return providingActions.any { action ->
+            !completedActions.contains(action.id) && 
+            isActionAchievable(gameData, action, completedActions, inventory, visited)
+        }
     }
     
     private fun isActionRequiredForGoal(

@@ -253,11 +253,6 @@ fun AnalyzedGoalCard(analyzedGoal: AnalyzedGoal) {
                 text = goal.description,
                 style = MaterialTheme.typography.bodyMedium
             )
-            Text(
-                text = "Goal",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
             
             // Show required actions for achievable goals
             if (analyzedGoal.achievability == GoalAchievability.ACHIEVABLE && analyzedGoal.requiredActions.isNotEmpty()) {
@@ -268,10 +263,10 @@ fun AnalyzedGoalCard(analyzedGoal: AnalyzedGoal) {
                 )
             }
             
-            // Show blocking actions for unachievable goals
-            if (analyzedGoal.achievability == GoalAchievability.UNACHIEVABLE && analyzedGoal.blockingActions.isNotEmpty()) {
+            // Show unachievable status
+            if (analyzedGoal.achievability == GoalAchievability.UNACHIEVABLE) {
                 Text(
-                    text = "Blocked by: ${analyzedGoal.blockingActions.size} action(s)",
+                    text = "Unachievable",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error
                 )
@@ -474,29 +469,69 @@ fun AvailableActionCard(
                 }
                 
                 if (analysis.wouldBreakGoals.isNotEmpty()) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
-                        Icon(
-                            Icons.Default.Warning,
-                            contentDescription = "Warning",
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                        Text(
-                            text = "Would break ${analysis.wouldBreakGoals.size} goal(s)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Warning,
+                                contentDescription = "Warning",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Would block ${analysis.wouldBreakGoals.size} goal(s):",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                        
+                        // List the specific goals that would be blocked
+                        analysis.wouldBreakGoals.forEach { goal ->
+                            Text(
+                                text = "• ${goal.description}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
                     }
                 }
                 
                 if (analysis.requiredForGoals.isNotEmpty()) {
-                    Text(
-                        text = "Required for ${analysis.requiredForGoals.size} goal(s)",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = "Required",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Required for ${analysis.requiredForGoals.size} goal(s):",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        
+                        // List the specific goals this action is required for
+                        analysis.requiredForGoals.forEach { goal ->
+                            Text(
+                                text = "• ${goal.description}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+                    }
                 }
             }
             

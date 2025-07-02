@@ -504,6 +504,161 @@ class GoalAnalyzerTest {
     }
     
     @Test
+    fun testImprovedPathAnalyzerConflictDetection() {
+        // Test the improved DAG-based conflict detection
+        val pathAnalyzer = PathAnalyzer(preconditionEngine)
+        
+        // Create a scenario with mutual exclusions (Millicent questline-like)
+        val conflictGameData = testGameData.copy(
+            actions = testGameData.actions + mapOf(
+                "reach_endgame" to GameAction(
+                    id = "reach_endgame",
+                    name = "Reach Endgame Area",
+                    description = "Access final area",
+                    preconditions = PreconditionExpression.ActionRequired("start"),
+                    rewards = emptyList(),
+                    category = ActionCategory.EXPLORATION
+                ),
+                "choice_a" to GameAction(
+                    id = "choice_a",
+                    name = "Choose Path A",
+                    description = "Mutually exclusive with Path B",
+                    preconditions = PreconditionExpression.And(listOf(
+                        PreconditionExpression.ActionRequired("reach_endgame"),
+                        PreconditionExpression.ActionForbidden("choice_b")
+                    )),
+                    rewards = listOf(Reward("reward_a", "Reward A")),
+                    category = ActionCategory.QUEST
+                ),
+                "choice_b" to GameAction(
+                    id = "choice_b", 
+                    name = "Choose Path B",
+                    description = "Mutually exclusive with Path A",
+                    preconditions = PreconditionExpression.And(listOf(
+                        PreconditionExpression.ActionRequired("reach_endgame"),
+                        PreconditionExpression.ActionForbidden("choice_a")
+                    )),
+                    rewards = listOf(Reward("reward_b", "Reward B")),
+                    category = ActionCategory.QUEST
+                )
+            ),
+            items = testGameData.items + mapOf(
+                "reward_a" to Item("reward_a", "Reward A", "Exclusive reward A"),
+                "reward_b" to Item("reward_b", "Reward B", "Exclusive reward B")
+            )
+        )
+        
+        // Set up game run with both conflicting goals
+        val gameRun = GameRun(
+            gameId = "test-game",
+            gameVersion = "1.0.0", 
+            runName = "Conflict Detection Test",
+            completedActions = setOf("start", "reach_endgame"), // Ready to make choice
+            goals = listOf(
+                Goal("goal1", "choice_a", "Choose Path A"),
+                Goal("goal2", "choice_b", "Choose Path B")
+            ),
+            createdAt = 0,
+            lastModified = 0
+        )
+        
+        val analyses = pathAnalyzer.analyzeActions(conflictGameData, gameRun)
+        
+        // Find analyses for both choices
+        val choiceAAnalysis = analyses.find { it.action.id == "choice_a" }
+        val choiceBAnalysis = analyses.find { it.action.id == "choice_b" }
+        
+        assertNotNull(choiceAAnalysis)
+        assertNotNull(choiceBAnalysis)
+        
+        // Both choices should be available
+        assertTrue(choiceAAnalysis.isAvailable)
+        assertTrue(choiceBAnalysis.isAvailable)
+        
+        // Choice A should break Goal 2 (choice_b goal)
+        assertTrue(
+            choiceAAnalysis.wouldBreakGoals.any { it.targetId == "choice_b" },
+            "choice_a should be marked as breaking the choice_b goal"
+        )
+        
+        // Choice B should break Goal 1 (choice_a goal)  
+        assertTrue(
+            choiceBAnalysis.wouldBreakGoals.any { it.targetId == "choice_a" },
+            "choice_b should be marked as breaking the choice_a goal"
+        )
+        
+        // Verify non-conflicting action (start) doesn't break any goals
+        val startAnalysis = analyses.find { it.action.id == "start" }
+        assertNotNull(startAnalysis)
+        assertTrue(startAnalysis.wouldBreakGoals.isEmpty())
+    }
+    
+    @Test
+    fun testStartingActionNotMarkedAsConflicting() {
+        // Test the specific issue: starting actions should NOT be marked as conflicting
+        val pathAnalyzer = PathAnalyzer(preconditionEngine)
+        
+        // Test Case 1: User sets goals before starting - start action should not be marked as conflicting
+        val gameRunBeforeStart = GameRun(
+            gameId = "test-game",
+            gameVersion = "1.0.0",
+            runName = "Before Start Test",
+            completedActions = emptySet(), // Nothing completed yet
+            goals = listOf(
+                Goal("goal1", "kill_boss_a", "Kill Boss A"), // Requires: start
+                Goal("goal2", "kill_boss_b", "Kill Boss B") // Requires: start -> kill_boss_a -> key_a, ActionForbidden(bad_choice)
+            ),
+            createdAt = 0,
+            lastModified = 0
+        )
+        
+        val analysesBeforeStart = pathAnalyzer.analyzeActions(testGameData, gameRunBeforeStart)
+        
+        // Find start action analysis
+        val startAnalysisBeforeStart = analysesBeforeStart.find { it.action.id == "start" }
+        assertNotNull(startAnalysisBeforeStart)
+        assertTrue(startAnalysisBeforeStart.isAvailable)
+        
+        // Start should NOT break any goals - it's required for all of them!
+        assertTrue(
+            startAnalysisBeforeStart.wouldBreakGoals.isEmpty(),
+            "Start action should not break any goals when set before starting, but found conflicts with: ${startAnalysisBeforeStart.wouldBreakGoals.map { it.targetId }}"
+        )
+        
+        // Test Case 2: After start, bad_choice should be marked as conflicting
+        val gameRunAfterStart = GameRun(
+            gameId = "test-game", 
+            gameVersion = "1.0.0",
+            runName = "After Start Test",
+            completedActions = setOf("start"), // Start completed, choices now available
+            goals = listOf(
+                Goal("goal1", "kill_boss_a", "Kill Boss A"),
+                Goal("goal2", "kill_boss_b", "Kill Boss B"),
+                Goal("goal3", "optional_quest", "Optional Quest") // OR condition: kill_boss_a OR bad_choice
+            ),
+            createdAt = 0,
+            lastModified = 0
+        )
+        
+        val analysesAfterStart = pathAnalyzer.analyzeActions(testGameData, gameRunAfterStart)
+        
+        // Verify bad_choice IS marked as conflicting with kill_boss_b goal
+        val badChoiceAnalysis = analysesAfterStart.find { it.action.id == "bad_choice" }
+        assertNotNull(badChoiceAnalysis)
+        assertTrue(badChoiceAnalysis.isAvailable, "bad_choice should be available after start")
+        assertTrue(
+            badChoiceAnalysis.wouldBreakGoals.any { it.targetId == "kill_boss_b" },
+            "bad_choice should be marked as breaking kill_boss_b goal"
+        )
+        
+        // But bad_choice should NOT break optional_quest (since optional_quest has OR condition)
+        assertFalse(
+            badChoiceAnalysis.wouldBreakGoals.any { it.targetId == "optional_quest" },
+            "bad_choice should NOT break optional_quest due to OR condition"
+        )
+    }
+    
+    @Test
     fun testShortestPathForOrPreconditions() {
         // Create a test scenario with OR preconditions where one path is shorter
         val gameDataWithOrPaths = testGameData.copy(
