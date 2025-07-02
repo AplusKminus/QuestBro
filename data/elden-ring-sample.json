@@ -1,0 +1,378 @@
+{
+  "gameId": "elden-ring",
+  "name": "Elden Ring",
+  "version": "1.0.0",
+  "actions": {
+    "reach_limgrave": {
+      "id": "reach_limgrave",
+      "name": "Reach Limgrave",
+      "description": "Start the game and complete the tutorial area",
+      "preconditions": {
+        "type": "Always"
+      },
+      "rewards": [],
+      "category": "EXPLORATION",
+      "location": "Tutorial Area"
+    },
+    "talk_melina_gatefront": {
+      "id": "talk_melina_gatefront",
+      "name": "Talk to Melina at Gatefront Ruins",
+      "description": "Rest at the Gatefront Ruins grace to meet Melina",
+      "completionCriteria": "until Melina gives you Torrent and the ability to level up",
+      "preconditions": {
+        "type": "ActionRequired",
+        "actionId": "reach_limgrave"
+      },
+      "rewards": [
+        {
+          "itemId": "torrent",
+          "description": "Torrent (spectral steed)"
+        },
+        {
+          "itemId": "flask_crimson_tears",
+          "description": "Flask of Crimson Tears"
+        }
+      ],
+      "category": "NPC_DIALOGUE",
+      "location": "Gatefront Ruins"
+    },
+    "talk_kenneth_haight": {
+      "id": "talk_kenneth_haight",
+      "name": "Talk to Kenneth Haight",
+      "description": "Speak with Kenneth Haight near the Third Church of Marika",
+      "completionCriteria": "until he asks you to clear Fort Haight",
+      "preconditions": {
+        "type": "ActionRequired",
+        "actionId": "reach_limgrave"
+      },
+      "rewards": [],
+      "category": "NPC_DIALOGUE",
+      "location": "Third Church of Marika"
+    },
+    "clear_fort_haight": {
+      "id": "clear_fort_haight",
+      "name": "Clear Fort Haight",
+      "description": "Defeat the knight at Fort Haight and claim the Dectus Medallion (Right)",
+      "preconditions": {
+        "type": "ActionRequired",
+        "actionId": "talk_kenneth_haight"
+      },
+      "rewards": [
+        {
+          "itemId": "dectus_medallion_right",
+          "description": "Dectus Medallion (Right)"
+        }
+      ],
+      "category": "QUEST",
+      "location": "Fort Haight"
+    },
+    "clear_fort_faroth": {
+      "id": "clear_fort_faroth",
+      "name": "Clear Fort Faroth",
+      "description": "Defeat the bats at Fort Faroth and claim the Dectus Medallion (Left)",
+      "preconditions": {
+        "type": "ActionRequired",
+        "actionId": "reach_caelid"
+      },
+      "rewards": [
+        {
+          "itemId": "dectus_medallion_left",
+          "description": "Dectus Medallion (Left)"
+        }
+      ],
+      "category": "QUEST",
+      "location": "Fort Faroth"
+    },
+    "reach_caelid": {
+      "id": "reach_caelid",
+      "name": "Reach Caelid",
+      "description": "Travel to the Caelid region",
+      "preconditions": {
+        "type": "ActionRequired",
+        "actionId": "talk_melina_gatefront"
+      },
+      "rewards": [],
+      "category": "EXPLORATION",
+      "location": "Caelid"
+    },
+    "defeat_margit": {
+      "id": "defeat_margit",
+      "name": "Defeat Margit, the Fell Omen",
+      "description": "Boss fight at Stormveil Castle entrance",
+      "preconditions": {
+        "type": "ActionRequired",
+        "actionId": "talk_melina_gatefront"
+      },
+      "rewards": [
+        {
+          "itemId": "talisman_pouch",
+          "description": "Talisman Pouch"
+        }
+      ],
+      "category": "BOSS",
+      "location": "Stormveil Castle"
+    },
+    "defeat_godrick": {
+      "id": "defeat_godrick",
+      "name": "Defeat Godrick the Grafted",
+      "description": "Main boss of Stormveil Castle",
+      "preconditions": {
+        "type": "ActionRequired",
+        "actionId": "defeat_margit"
+      },
+      "rewards": [
+        {
+          "itemId": "godricks_great_rune",
+          "description": "Godrick's Great Rune"
+        },
+        {
+          "itemId": "remembrance_grafted",
+          "description": "Remembrance of the Grafted"
+        }
+      ],
+      "category": "BOSS",
+      "location": "Stormveil Castle"
+    },
+    "use_grand_lift_dectus": {
+      "id": "use_grand_lift_dectus",
+      "name": "Use Grand Lift of Dectus",
+      "description": "Activate the lift with both medallion halves to reach Altus Plateau",
+      "preconditions": {
+        "type": "And",
+        "expressions": [
+          {
+            "type": "ActionRequired",
+            "actionId": "clear_fort_haight"
+          },
+          {
+            "type": "ActionRequired",
+            "actionId": "clear_fort_faroth"
+          }
+        ]
+      },
+      "rewards": [],
+      "category": "EXPLORATION",
+      "location": "Grand Lift of Dectus"
+    },
+    "defeat_magma_wyrm_makar": {
+      "id": "defeat_magma_wyrm_makar",
+      "name": "Defeat Magma Wyrm Makar",
+      "description": "Boss fight at the end of Ruin-Strewn Precipice",
+      "preconditions": {
+        "type": "ActionRequired",
+        "actionId": "reach_liurnia"
+      },
+      "rewards": [
+        {
+          "itemId": "magma_wyrm_scalesword",
+          "description": "Magma Wyrm's Scalesword"
+        }
+      ],
+      "category": "BOSS",
+      "location": "Ruin-Strewn Precipice"
+    },
+    "reach_liurnia": {
+      "id": "reach_liurnia",
+      "name": "Reach Liurnia of the Lakes",
+      "description": "Travel to Liurnia region",
+      "preconditions": {
+        "type": "Or",
+        "expressions": [
+          {
+            "type": "ActionRequired",
+            "actionId": "defeat_godrick"
+          },
+          {
+            "type": "ActionRequired",
+            "actionId": "reach_limgrave"
+          }
+        ]
+      },
+      "rewards": [],
+      "category": "EXPLORATION",
+      "location": "Liurnia of the Lakes"
+    },
+    "reach_altus_plateau": {
+      "id": "reach_altus_plateau",
+      "name": "Reach Altus Plateau",
+      "description": "Access the Altus Plateau region",
+      "preconditions": {
+        "type": "Or",
+        "expressions": [
+          {
+            "type": "ActionRequired",
+            "actionId": "use_grand_lift_dectus"
+          },
+          {
+            "type": "ActionRequired",
+            "actionId": "defeat_magma_wyrm_makar"
+          }
+        ]
+      },
+      "rewards": [],
+      "category": "EXPLORATION",
+      "location": "Altus Plateau"
+    },
+    "pickup_champions_song_painting": {
+      "id": "pickup_champions_song_painting",
+      "name": "Pick up Champion's Song Painting",
+      "description": "Collect the painting from Ailing Village",
+      "preconditions": {
+        "type": "ActionRequired",
+        "actionId": "reach_altus_plateau"
+      },
+      "rewards": [
+        {
+          "itemId": "champions_song_painting",
+          "description": "Champion's Song Painting"
+        }
+      ],
+      "category": "ITEM_PICKUP",
+      "location": "Ailing Village"
+    },
+    "defeat_glintstone_dragon_adula": {
+      "id": "defeat_glintstone_dragon_adula",
+      "name": "Defeat Glintstone Dragon Adula",
+      "description": "Boss fight at the Cathedral of Manus Celes",
+      "preconditions": {
+        "type": "And",
+        "expressions": [
+          {
+            "type": "ActionRequired",
+            "actionId": "complete_ranni_questline_caria_manor"
+          },
+          {
+            "type": "ActionForbidden",
+            "actionId": "defeat_radahn_before_ranni"
+          }
+        ]
+      },
+      "rewards": [
+        {
+          "itemId": "adulas_moonblade",
+          "description": "Adula's Moonblade"
+        }
+      ],
+      "category": "BOSS",
+      "location": "Cathedral of Manus Celes"
+    },
+    "complete_ranni_questline_caria_manor": {
+      "id": "complete_ranni_questline_caria_manor",
+      "name": "Complete Ranni questline up to Caria Manor",
+      "description": "Meet Ranni and get the Carian Inverted Statue",
+      "completionCriteria": "until Ranni gives you the Carian Inverted Statue",
+      "preconditions": {
+        "type": "ActionRequired",
+        "actionId": "reach_liurnia"
+      },
+      "rewards": [
+        {
+          "itemId": "carian_inverted_statue",
+          "description": "Carian Inverted Statue"
+        }
+      ],
+      "category": "QUEST",
+      "location": "Ranni's Rise"
+    },
+    "defeat_radahn_before_ranni": {
+      "id": "defeat_radahn_before_ranni",
+      "name": "Defeat Radahn before meeting Ranni",
+      "description": "This action locks out parts of Ranni's questline",
+      "preconditions": {
+        "type": "And",
+        "expressions": [
+          {
+            "type": "ActionRequired",
+            "actionId": "reach_caelid"
+          },
+          {
+            "type": "ActionForbidden",
+            "actionId": "complete_ranni_questline_caria_manor"
+          }
+        ]
+      },
+      "rewards": [
+        {
+          "itemId": "radahns_great_rune",
+          "description": "Radahn's Great Rune"
+        }
+      ],
+      "category": "BOSS",
+      "location": "Redmane Castle"
+    }
+  },
+  "items": {
+    "torrent": {
+      "id": "torrent",
+      "name": "Torrent",
+      "type": "KEY_ITEM",
+      "description": "Spectral steed that allows fast travel across the Lands Between"
+    },
+    "flask_crimson_tears": {
+      "id": "flask_crimson_tears",
+      "name": "Flask of Crimson Tears",
+      "type": "CONSUMABLE",
+      "description": "Sacred flask that restores HP"
+    },
+    "dectus_medallion_right": {
+      "id": "dectus_medallion_right",
+      "name": "Dectus Medallion (Right)",
+      "type": "KEY_ITEM",
+      "description": "Right half of the medallion needed for the Grand Lift of Dectus"
+    },
+    "dectus_medallion_left": {
+      "id": "dectus_medallion_left",
+      "name": "Dectus Medallion (Left)",
+      "type": "KEY_ITEM",
+      "description": "Left half of the medallion needed for the Grand Lift of Dectus"
+    },
+    "talisman_pouch": {
+      "id": "talisman_pouch",
+      "name": "Talisman Pouch",
+      "type": "KEY_ITEM",
+      "description": "Increases the number of talismans that can be equipped"
+    },
+    "godricks_great_rune": {
+      "id": "godricks_great_rune",
+      "name": "Godrick's Great Rune",
+      "type": "KEY_ITEM",
+      "description": "Great Rune of Godrick the Grafted, raises all attributes when activated"
+    },
+    "remembrance_grafted": {
+      "id": "remembrance_grafted",
+      "name": "Remembrance of the Grafted",
+      "type": "KEY_ITEM",
+      "description": "Can be traded for Godrick's weapons or consumed for runes"
+    },
+    "magma_wyrm_scalesword": {
+      "id": "magma_wyrm_scalesword",
+      "name": "Magma Wyrm's Scalesword",
+      "type": "WEAPON",
+      "description": "Curved greatsword imbued with magma"
+    },
+    "champions_song_painting": {
+      "id": "champions_song_painting",
+      "name": "Champion's Song Painting",
+      "type": "KEY_ITEM",
+      "description": "Painting that leads to a hidden treasure when solved"
+    },
+    "adulas_moonblade": {
+      "id": "adulas_moonblade",
+      "name": "Adula's Moonblade",
+      "type": "SPELL",
+      "description": "Sorcery that creates a gigantic magic greatsword"
+    },
+    "carian_inverted_statue": {
+      "id": "carian_inverted_statue",
+      "name": "Carian Inverted Statue",
+      "type": "KEY_ITEM",
+      "description": "Key item for progressing Ranni's questline"
+    },
+    "radahns_great_rune": {
+      "id": "radahns_great_rune",
+      "name": "Radahn's Great Rune",
+      "type": "KEY_ITEM",
+      "description": "Great Rune of Starscourge Radahn, raises HP, FP, and Stamina"
+    }
+  }
+}
