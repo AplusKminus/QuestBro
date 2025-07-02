@@ -6,8 +6,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.questbro.data.FileRepository
-import com.questbro.data.GameRepository
+import com.questbro.data.*
 import com.questbro.domain.*
 import kotlinx.coroutines.launch
 
@@ -17,6 +16,8 @@ fun QuestBroApp() {
     val scope = rememberCoroutineScope()
     val fileRepository = remember { FileRepository() }
     val gameRepository = remember { GameRepository(fileRepository) }
+    val gameDiscovery = remember { GameDiscovery() }
+    val gameManager = remember { GameManager(gameDiscovery, gameRepository) }
     val preconditionEngine = remember { PreconditionEngine() }
     val pathAnalyzer = remember { PathAnalyzer(preconditionEngine) }
     
@@ -25,6 +26,8 @@ fun QuestBroApp() {
     var actionAnalyses by remember { mutableStateOf<List<ActionAnalysis>>(emptyList()) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showNewRunDialog by remember { mutableStateOf(false) }
+    var availableGames by remember { mutableStateOf<List<AvailableGame>>(emptyList()) }
+    var selectedGameId by remember { mutableStateOf("") }
     var newRunName by remember { mutableStateOf("") }
     
     fun refreshAnalyses() {
@@ -63,35 +66,31 @@ fun QuestBroApp() {
                 }
             }
             
-            // File controls
+            // Main controls
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
                     onClick = {
                         scope.launch {
-                            fileRepository.pickFile("Load Game Data", listOf("json"))?.let { filePath ->
-                                gameRepository.loadGameData(filePath).fold(
-                                    onSuccess = { 
-                                        gameData = it
-                                        errorMessage = null
-                                    },
-                                    onFailure = { errorMessage = "Failed to load game data: ${it.message}" }
-                                )
-                            }
+                            availableGames = gameManager.getAvailableGames()
+                            selectedGameId = availableGames.firstOrNull()?.id ?: ""
+                            newRunName = ""
+                            showNewRunDialog = true
                         }
                     }
                 ) {
-                    Text("Load Game Data")
+                    Text("New Run")
                 }
                 
                 Button(
                     onClick = {
                         scope.launch {
                             fileRepository.pickFile("Load Run", listOf("json"))?.let { filePath ->
-                                gameRepository.loadRun(filePath).fold(
-                                    onSuccess = { 
-                                        gameRun = it
+                                gameManager.loadRunWithGameData(filePath).fold(
+                                    onSuccess = { (loadedGameData, loadedGameRun) ->
+                                        gameData = loadedGameData
+                                        gameRun = loadedGameRun
                                         errorMessage = null
                                     },
                                     onFailure = { errorMessage = "Failed to load run: ${it.message}" }
@@ -101,18 +100,6 @@ fun QuestBroApp() {
                     }
                 ) {
                     Text("Load Run")
-                }
-                
-                Button(
-                    onClick = {
-                        if (gameData != null) {
-                            newRunName = ""
-                            showNewRunDialog = true
-                        }
-                    },
-                    enabled = gameData != null
-                ) {
-                    Text("New Run")
                 }
                 
                 Button(
@@ -149,64 +136,70 @@ fun QuestBroApp() {
             }
             
             // Main content
-            when {
-                gameData == null -> {
-                    Card {
-                        Box(
-                            modifier = Modifier.fillMaxSize().padding(32.dp),
-                            contentAlignment = Alignment.Center
+            if (gameData != null && gameRun != null) {
+                QuestBroContent(
+                    gameData = gameData!!,
+                    gameRun = gameRun!!,
+                    actionAnalyses = actionAnalyses,
+                    onActionToggle = { actionId ->
+                        val currentRun = gameRun!!
+                        gameRun = if (currentRun.completedActions.contains(actionId)) {
+                            currentRun.copy(completedActions = currentRun.completedActions - actionId)
+                        } else {
+                            currentRun.copy(completedActions = currentRun.completedActions + actionId)
+                        }
+                    },
+                    onAddGoal = { goal ->
+                        val currentRun = gameRun!!
+                        gameRun = currentRun.copy(goals = currentRun.goals + goal)
+                    }
+                )
+            } else {
+                Card {
+                    Box(
+                        modifier = Modifier.fillMaxSize().padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             Text(
-                                text = "Load a game data file to get started",
+                                text = "Welcome to QuestBro",
+                                style = MaterialTheme.typography.headlineSmall
+                            )
+                            Text(
+                                text = "Create a new run or load an existing one to get started",
                                 style = MaterialTheme.typography.bodyLarge
                             )
                         }
                     }
-                }
-                gameRun == null -> {
-                    Card {
-                        Box(
-                            modifier = Modifier.fillMaxSize().padding(32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Create a new run or load an existing one",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                        }
-                    }
-                }
-                else -> {
-                    QuestBroContent(
-                        gameData = gameData!!,
-                        gameRun = gameRun!!,
-                        actionAnalyses = actionAnalyses,
-                        onActionToggle = { actionId ->
-                            val currentRun = gameRun!!
-                            gameRun = if (currentRun.completedActions.contains(actionId)) {
-                                currentRun.copy(completedActions = currentRun.completedActions - actionId)
-                            } else {
-                                currentRun.copy(completedActions = currentRun.completedActions + actionId)
-                            }
-                        },
-                        onAddGoal = { goal ->
-                            val currentRun = gameRun!!
-                            gameRun = currentRun.copy(goals = currentRun.goals + goal)
-                        }
-                    )
                 }
             }
             
             // New Run Dialog
             if (showNewRunDialog) {
                 NewRunDialog(
+                    availableGames = availableGames,
+                    selectedGameId = selectedGameId,
+                    onGameSelectionChange = { selectedGameId = it },
                     currentRunName = newRunName,
                     onRunNameChange = { newRunName = it },
                     onConfirm = {
-                        val data = gameData
-                        if (data != null && newRunName.isNotBlank()) {
-                            gameRun = gameRepository.createNewRun(data, newRunName.trim())
-                            showNewRunDialog = false
+                        scope.launch {
+                            if (selectedGameId.isNotBlank() && newRunName.isNotBlank()) {
+                                gameManager.createNewRunForGame(selectedGameId, newRunName.trim()).fold(
+                                    onSuccess = { (loadedGameData, loadedGameRun) ->
+                                        gameData = loadedGameData
+                                        gameRun = loadedGameRun
+                                        showNewRunDialog = false
+                                        errorMessage = null
+                                    },
+                                    onFailure = { 
+                                        errorMessage = "Failed to create new run: ${it.message}"
+                                    }
+                                )
+                            }
                         }
                     },
                     onDismiss = { showNewRunDialog = false }
@@ -216,22 +209,62 @@ fun QuestBroApp() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewRunDialog(
+    availableGames: List<AvailableGame>,
+    selectedGameId: String,
+    onGameSelectionChange: (String) -> Unit,
     currentRunName: String,
     onRunNameChange: (String) -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    var expanded by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text("Create New Run")
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Game selection
                 Text(
-                    text = "Enter a name for your new playthrough:",
+                    text = "Select a game:",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded }
+                ) {
+                    OutlinedTextField(
+                        value = availableGames.find { it.id == selectedGameId }?.name ?: "Select game...",
+                        onValueChange = { },
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                    )
+                    
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        availableGames.forEach { game ->
+                            DropdownMenuItem(
+                                text = { Text(game.name) },
+                                onClick = {
+                                    onGameSelectionChange(game.id)
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+                
+                // Run name input
+                Text(
+                    text = "Enter a name for your playthrough:",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 OutlinedTextField(
