@@ -62,7 +62,6 @@ data class Reward(
 data class Item(
     val id: String,
     val name: String,
-    val type: ItemType,
     val description: String
 )
 
@@ -80,17 +79,10 @@ data class GameRun(
 @Serializable
 data class Goal(
     val id: String,
-    val type: GoalType,
     val targetId: String,
     val description: String,
     val priority: Int = 0
 )
 
 @Serializable
-enum class GoalType { ACTION, ITEM }
-
-@Serializable
 enum class ActionCategory { BOSS, NPC_DIALOGUE, EXPLORATION, QUEST, ITEM_PICKUP }
-
-@Serializable
-enum class ItemType { WEAPON, ARMOR, CONSUMABLE, KEY_ITEM, SPELL }

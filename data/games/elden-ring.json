@@ -299,80 +299,144 @@
       ],
       "category": "BOSS",
       "location": "Redmane Castle"
+    },
+    "defeat_putrid_tree_spirit_elphael": {
+      "id": "defeat_putrid_tree_spirit_elphael",
+      "name": "Defeat the Putrid Tree Spirit at Elphael, Brace of the Haligtree",
+      "description": "Boss fight required to progress Millicent's questline",
+      "preconditions": {
+        "type": "ActionRequired",
+        "actionId": "reach_altus_plateau"
+      },
+      "rewards": [],
+      "category": "BOSS",
+      "location": "Elphael, Brace of the Haligtree"
+    },
+    "assist_millicent_defeat_sisters": {
+      "id": "assist_millicent_defeat_sisters",
+      "name": "Assist Millicent to defeat her sisters",
+      "description": "Help Millicent fight against her sisters in the final confrontation",
+      "completionCriteria": "until the sisters are defeated and Millicent thanks you",
+      "preconditions": {
+        "type": "And",
+        "expressions": [
+          {
+            "type": "ActionRequired",
+            "actionId": "defeat_putrid_tree_spirit_elphael"
+          },
+          {
+            "type": "ActionForbidden",
+            "actionId": "assist_sisters_kill_millicent"
+          }
+        ]
+      },
+      "rewards": [
+        {
+          "itemId": "rotten_winged_sword_insignia",
+          "description": "Rotten Winged Sword Insignia"
+        }
+      ],
+      "category": "QUEST",
+      "location": "Elphael, Brace of the Haligtree"
+    },
+    "assist_sisters_kill_millicent": {
+      "id": "assist_sisters_kill_millicent",
+      "name": "Assist the sisters to kill Millicent",
+      "description": "Help Millicent's sisters defeat her in the final confrontation",
+      "completionCriteria": "until Millicent is defeated and you can loot her prosthesis",
+      "preconditions": {
+        "type": "And",
+        "expressions": [
+          {
+            "type": "ActionRequired",
+            "actionId": "defeat_putrid_tree_spirit_elphael"
+          },
+          {
+            "type": "ActionForbidden",
+            "actionId": "assist_millicent_defeat_sisters"
+          }
+        ]
+      },
+      "rewards": [
+        {
+          "itemId": "millicents_prosthesis",
+          "description": "Millicent's Prosthesis"
+        }
+      ],
+      "category": "QUEST",
+      "location": "Elphael, Brace of the Haligtree"
     }
   },
   "items": {
     "torrent": {
       "id": "torrent",
       "name": "Torrent",
-      "type": "KEY_ITEM",
       "description": "Spectral steed that allows fast travel across the Lands Between"
     },
     "flask_crimson_tears": {
       "id": "flask_crimson_tears",
       "name": "Flask of Crimson Tears",
-      "type": "CONSUMABLE",
       "description": "Sacred flask that restores HP"
     },
     "dectus_medallion_right": {
       "id": "dectus_medallion_right",
       "name": "Dectus Medallion (Right)",
-      "type": "KEY_ITEM",
       "description": "Right half of the medallion needed for the Grand Lift of Dectus"
     },
     "dectus_medallion_left": {
       "id": "dectus_medallion_left",
       "name": "Dectus Medallion (Left)",
-      "type": "KEY_ITEM",
       "description": "Left half of the medallion needed for the Grand Lift of Dectus"
     },
     "talisman_pouch": {
       "id": "talisman_pouch",
       "name": "Talisman Pouch",
-      "type": "KEY_ITEM",
       "description": "Increases the number of talismans that can be equipped"
     },
     "godricks_great_rune": {
       "id": "godricks_great_rune",
       "name": "Godrick's Great Rune",
-      "type": "KEY_ITEM",
       "description": "Great Rune of Godrick the Grafted, raises all attributes when activated"
     },
     "remembrance_grafted": {
       "id": "remembrance_grafted",
       "name": "Remembrance of the Grafted",
-      "type": "KEY_ITEM",
       "description": "Can be traded for Godrick's weapons or consumed for runes"
     },
     "magma_wyrm_scalesword": {
       "id": "magma_wyrm_scalesword",
       "name": "Magma Wyrm's Scalesword",
-      "type": "WEAPON",
       "description": "Curved greatsword imbued with magma"
     },
     "champions_song_painting": {
       "id": "champions_song_painting",
       "name": "Champion's Song Painting",
-      "type": "KEY_ITEM",
       "description": "Painting that leads to a hidden treasure when solved"
     },
     "adulas_moonblade": {
       "id": "adulas_moonblade",
       "name": "Adula's Moonblade",
-      "type": "SPELL",
       "description": "Sorcery that creates a gigantic magic greatsword"
     },
     "carian_inverted_statue": {
       "id": "carian_inverted_statue",
       "name": "Carian Inverted Statue",
-      "type": "KEY_ITEM",
       "description": "Key item for progressing Ranni's questline"
     },
     "radahns_great_rune": {
       "id": "radahns_great_rune",
       "name": "Radahn's Great Rune",
-      "type": "KEY_ITEM",
       "description": "Great Rune of Starscourge Radahn, raises HP, FP, and Stamina"
+    },
+    "rotten_winged_sword_insignia": {
+      "id": "rotten_winged_sword_insignia",
+      "name": "Rotten Winged Sword Insignia",
+      "description": "Talisman that greatly boosts attack power with successive attacks"
+    },
+    "millicents_prosthesis": {
+      "id": "millicents_prosthesis",
+      "name": "Millicent's Prosthesis",
+      "description": "Talisman that boosts dexterity and attack power with successive attacks"
     }
   }
 }

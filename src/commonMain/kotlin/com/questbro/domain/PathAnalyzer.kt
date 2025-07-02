@@ -67,41 +67,19 @@ class PathAnalyzer(private val preconditionEngine: PreconditionEngine) {
         completedActions: Set<String>,
         inventory: Set<String>
     ): Boolean {
-        return when (goal.type) {
-            GoalType.ACTION -> {
-                val targetAction = gameData.actions[goal.targetId] ?: return false
-                completedActions.contains(goal.targetId) || 
-                preconditionEngine.evaluate(targetAction.preconditions, completedActions, inventory)
-            }
-            GoalType.ITEM -> {
-                inventory.contains(goal.targetId) ||
-                gameData.actions.values.any { action ->
-                    !completedActions.contains(action.id) &&
-                    action.rewards.any { it.itemId == goal.targetId } &&
-                    preconditionEngine.evaluate(action.preconditions, completedActions, inventory)
-                }
-            }
-        }
+        val targetAction = gameData.actions[goal.targetId] ?: return false
+        return completedActions.contains(goal.targetId) || 
+               preconditionEngine.evaluate(targetAction.preconditions, completedActions, inventory)
     }
     
     private fun isActionRequiredForGoal(
         gameData: GameData,
         goal: Goal,
         action: GameAction,
-        completedActions: Set<String>
+        @Suppress("UNUSED_PARAMETER") completedActions: Set<String>
     ): Boolean {
-        return when (goal.type) {
-            GoalType.ACTION -> {
-                goal.targetId == action.id || 
-                isActionInPreconditionChain(gameData, goal.targetId, action.id)
-            }
-            GoalType.ITEM -> {
-                action.rewards.any { it.itemId == goal.targetId } ||
-                gameData.actions.values
-                    .filter { it.rewards.any { reward -> reward.itemId == goal.targetId } }
-                    .any { itemAction -> isActionInPreconditionChain(gameData, itemAction.id, action.id) }
-            }
-        }
+        return goal.targetId == action.id || 
+               isActionInPreconditionChain(gameData, goal.targetId, action.id)
     }
     
     private fun isActionInPreconditionChain(
