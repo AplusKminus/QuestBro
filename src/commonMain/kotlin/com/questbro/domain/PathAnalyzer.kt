@@ -43,11 +43,17 @@ class PathAnalyzer(private val preconditionEngine: PreconditionEngine) {
         gameRun: GameRun,
         candidateAction: GameAction
     ): List<Goal> {
+        val currentInventory = preconditionEngine.getInventory(gameData, gameRun.completedActions)
         val simulatedCompleted = gameRun.completedActions + candidateAction.id
         val simulatedInventory = preconditionEngine.getInventory(gameData, simulatedCompleted)
         
         return gameRun.goals.filter { goal ->
-            !isGoalAchievable(gameData, goal, simulatedCompleted, simulatedInventory)
+            // Only consider goals that are currently achievable but would become unachievable after the action
+            val currentlyAchievable = isGoalAchievable(gameData, goal, gameRun.completedActions, currentInventory)
+            val wouldBeAchievable = isGoalAchievable(gameData, goal, simulatedCompleted, simulatedInventory)
+            
+            // Goal is conflicting only if it goes from achievable to unachievable
+            currentlyAchievable && !wouldBeAchievable
         }
     }
     

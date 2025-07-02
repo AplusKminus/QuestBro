@@ -370,38 +370,31 @@ fun GoalSearchDialog(
                 PreconditionEngine().getInventory(gameData, gameRun.completedActions)
             )
             
-            // Check for conflicts with existing goals
+            // Check for conflicts by analyzing which existing goals would be affected when adding this new goal
             val conflictingGoals = mutableListOf<Goal>()
             
-            // Simple approach: check if the new goal's target action has ActionForbidden preconditions
-            // that would be violated by actions required for existing goals
-            val newGoalAction = gameData.actions[tempGoal.targetId]
-            if (newGoalAction != null) {
-                // Get all ActionForbidden constraints from the new goal's action
-                val forbiddenActions = extractForbiddenActions(newGoalAction.preconditions)
-                
-                // Check if any existing goals require these forbidden actions
-                for (existingGoal in gameRun.goals) {
-                    val existingAction = gameData.actions[existingGoal.targetId]
-                    if (existingAction != null) {
-                        // Check if existing goal requires any forbidden action (directly or indirectly)
-                        val requiredActions = extractRequiredActions(existingAction.preconditions)
-                        if (requiredActions.any { actionId -> forbiddenActions.contains(actionId) }) {
-                            conflictingGoals.add(existingGoal)
-                        }
-                        
-                        // Also check the reverse: if the new goal requires actions forbidden by existing goals
-                        val existingForbiddenActions = extractForbiddenActions(existingAction.preconditions)
-                        val newRequiredActions = extractRequiredActions(newGoalAction.preconditions)
-                        if (newRequiredActions.any { actionId -> existingForbiddenActions.contains(actionId) }) {
-                            conflictingGoals.add(existingGoal)
-                        }
-                        
-                        // Check if the goals are directly mutually exclusive (both forbid each other's target)
-                        if (forbiddenActions.contains(existingGoal.targetId) || 
-                            existingForbiddenActions.contains(tempGoal.targetId)) {
-                            conflictingGoals.add(existingGoal)
-                        }
+            // Use PathAnalyzer to determine which actions would break existing goals when the new goal is present
+            val simulatedGameRun = gameRun.copy(goals = gameRun.goals + tempGoal)
+            val pathAnalyzer = PathAnalyzer(PreconditionEngine())
+            val actionAnalyses = pathAnalyzer.analyzeActions(gameData, simulatedGameRun)
+            
+            // Find actions that would break existing goals and check if they're required for the new goal
+            for (analysis in actionAnalyses) {
+                if (analysis.isAvailable) {
+                    // Check if this action would break any existing goals
+                    val brokenExistingGoals = analysis.wouldBreakGoals.filter { brokenGoal ->
+                        // Only count goals that were in the original game run (not the new goal itself)
+                        gameRun.goals.any { it.targetId == brokenGoal.targetId }
+                    }
+                    
+                    // Check if this action is required for the new goal
+                    val isRequiredForNewGoal = analysis.requiredForGoals.any { requiredGoal ->
+                        requiredGoal.targetId == tempGoal.targetId
+                    }
+                    
+                    // If the action is required for the new goal and breaks existing goals, those are conflicts
+                    if (isRequiredForNewGoal && brokenExistingGoals.isNotEmpty()) {
+                        conflictingGoals.addAll(brokenExistingGoals)
                     }
                 }
             }
