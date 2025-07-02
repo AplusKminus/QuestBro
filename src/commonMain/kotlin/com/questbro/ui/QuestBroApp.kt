@@ -152,6 +152,10 @@ fun QuestBroApp() {
                     onAddGoal = { goal ->
                         val currentRun = gameRun!!
                         gameRun = currentRun.copy(goals = currentRun.goals + goal)
+                    },
+                    onRemoveGoal = { goal ->
+                        val currentRun = gameRun!!
+                        gameRun = currentRun.copy(goals = currentRun.goals.filter { it.id != goal.id })
                     }
                 )
             } else {

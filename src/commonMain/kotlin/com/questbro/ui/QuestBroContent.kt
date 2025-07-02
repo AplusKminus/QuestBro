@@ -15,6 +15,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.questbro.domain.*
 
+// Helper functions for conflict detection
+private fun extractForbiddenActions(expression: PreconditionExpression): Set<String> {
+    return when (expression) {
+        is PreconditionExpression.ActionForbidden -> setOf(expression.actionId)
+        is PreconditionExpression.And -> expression.expressions.flatMap { extractForbiddenActions(it) }.toSet()
+        is PreconditionExpression.Or -> expression.expressions.flatMap { extractForbiddenActions(it) }.toSet()
+        else -> emptySet()
+    }
+}
+
+private fun extractRequiredActions(expression: PreconditionExpression): Set<String> {
+    return when (expression) {
+        is PreconditionExpression.ActionRequired -> setOf(expression.actionId)
+        is PreconditionExpression.And -> expression.expressions.flatMap { extractRequiredActions(it) }.toSet()
+        is PreconditionExpression.Or -> expression.expressions.flatMap { extractRequiredActions(it) }.toSet()
+        else -> emptySet()
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuestBroContent(
@@ -22,7 +41,8 @@ fun QuestBroContent(
     gameRun: GameRun,
     actionAnalyses: List<ActionAnalysis>,
     onActionToggle: (String) -> Unit,
-    onAddGoal: (Goal) -> Unit
+    onAddGoal: (Goal) -> Unit,
+    onRemoveGoal: (Goal) -> Unit
 ) {
     var showCompleted by remember { mutableStateOf(false) }
     var showGoalSearch by remember { mutableStateOf(false) }
@@ -74,7 +94,10 @@ fun QuestBroContent(
                         )
                     }
                 } else {
-                    CategorizedGoalsList(analyzedGoals = analyzedGoals)
+                    CategorizedGoalsList(
+                        analyzedGoals = analyzedGoals,
+                        onRemoveGoal = onRemoveGoal
+                    )
                 }
             }
         }
@@ -169,7 +192,10 @@ fun QuestBroContent(
 }
 
 @Composable
-fun CategorizedGoalsList(analyzedGoals: List<AnalyzedGoal>) {
+fun CategorizedGoalsList(
+    analyzedGoals: List<AnalyzedGoal>,
+    onRemoveGoal: (Goal) -> Unit
+) {
     val directlyAchievable = analyzedGoals.filter { it.achievability == GoalAchievability.DIRECTLY_ACHIEVABLE }
     val achievable = analyzedGoals.filter { it.achievability == GoalAchievability.ACHIEVABLE }
     val unachievable = analyzedGoals.filter { it.achievability == GoalAchievability.UNACHIEVABLE }
@@ -185,7 +211,10 @@ fun CategorizedGoalsList(analyzedGoals: List<AnalyzedGoal>) {
                 )
             }
             items(directlyAchievable) { analyzedGoal ->
-                AnalyzedGoalCard(analyzedGoal)
+                AnalyzedGoalCard(
+                    analyzedGoal = analyzedGoal,
+                    onRemoveGoal = onRemoveGoal
+                )
             }
         }
         
@@ -197,7 +226,10 @@ fun CategorizedGoalsList(analyzedGoals: List<AnalyzedGoal>) {
                 )
             }
             items(achievable) { analyzedGoal ->
-                AnalyzedGoalCard(analyzedGoal)
+                AnalyzedGoalCard(
+                    analyzedGoal = analyzedGoal,
+                    onRemoveGoal = onRemoveGoal
+                )
             }
         }
         
@@ -209,7 +241,10 @@ fun CategorizedGoalsList(analyzedGoals: List<AnalyzedGoal>) {
                 )
             }
             items(unachievable) { analyzedGoal ->
-                AnalyzedGoalCard(analyzedGoal)
+                AnalyzedGoalCard(
+                    analyzedGoal = analyzedGoal,
+                    onRemoveGoal = onRemoveGoal
+                )
             }
         }
     }
@@ -226,7 +261,10 @@ fun GoalCategoryHeader(title: String, color: Color) {
 }
 
 @Composable
-fun AnalyzedGoalCard(analyzedGoal: AnalyzedGoal) {
+fun AnalyzedGoalCard(
+    analyzedGoal: AnalyzedGoal,
+    onRemoveGoal: (Goal) -> Unit
+) {
     val goal = analyzedGoal.goal
     val borderColor = when (analyzedGoal.achievability) {
         GoalAchievability.DIRECTLY_ACHIEVABLE -> MaterialTheme.colorScheme.primary
@@ -245,30 +283,49 @@ fun AnalyzedGoalCard(analyzedGoal: AnalyzedGoal) {
         ),
         border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
     ) {
-        Column(
+        Row(
             modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.Top
         ) {
-            Text(
-                text = goal.description,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            
-            // Show required actions for achievable goals
-            if (analyzedGoal.achievability == GoalAchievability.ACHIEVABLE && analyzedGoal.requiredActions.isNotEmpty()) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 Text(
-                    text = "Requires: ${analyzedGoal.requiredActions.size} action(s)",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary
+                    text = goal.description,
+                    style = MaterialTheme.typography.bodyMedium
                 )
+            
+                // Show required actions for achievable goals
+                if (analyzedGoal.achievability == GoalAchievability.ACHIEVABLE && analyzedGoal.requiredActions.isNotEmpty()) {
+                    Text(
+                        text = "Requires: ${analyzedGoal.requiredActions.size} action(s)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+                
+                // Show unachievable status
+                if (analyzedGoal.achievability == GoalAchievability.UNACHIEVABLE) {
+                    Text(
+                        text = "Unachievable",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
             
-            // Show unachievable status
-            if (analyzedGoal.achievability == GoalAchievability.UNACHIEVABLE) {
-                Text(
-                    text = "Unachievable",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
+            // Remove button
+            IconButton(
+                onClick = { onRemoveGoal(goal) },
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Remove goal",
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    modifier = Modifier.size(16.dp)
                 )
             }
         }
@@ -293,7 +350,8 @@ fun GoalSearchDialog(
     
     data class AnalyzedSearchableGoal(
         val searchableGoal: SearchableGoal,
-        val isCompatible: Boolean
+        val isCompatible: Boolean,
+        val conflictingGoals: List<Goal>
     )
     
     val searchResults = remember(searchQuery, searchableGoals, existingTargetIds, gameRun) {
@@ -302,7 +360,7 @@ fun GoalSearchDialog(
         }
         val searchedGoals = goalSearch.searchGoals(filteredGoals, searchQuery)
         
-        // Analyze compatibility for each goal
+        // Analyze compatibility and conflicts for each goal
         searchedGoals.map { searchableGoal ->
             val tempGoal = goalSearch.createGoalFromSearchable(searchableGoal)
             val analyzedGoal = goalAnalyzer.analyzeGoal(
@@ -311,12 +369,56 @@ fun GoalSearchDialog(
                 gameRun.completedActions,
                 PreconditionEngine().getInventory(gameData, gameRun.completedActions)
             )
+            
+            // Check for conflicts with existing goals
+            val conflictingGoals = mutableListOf<Goal>()
+            
+            // Simple approach: check if the new goal's target action has ActionForbidden preconditions
+            // that would be violated by actions required for existing goals
+            val newGoalAction = gameData.actions[tempGoal.targetId]
+            if (newGoalAction != null) {
+                // Get all ActionForbidden constraints from the new goal's action
+                val forbiddenActions = extractForbiddenActions(newGoalAction.preconditions)
+                
+                // Check if any existing goals require these forbidden actions
+                for (existingGoal in gameRun.goals) {
+                    val existingAction = gameData.actions[existingGoal.targetId]
+                    if (existingAction != null) {
+                        // Check if existing goal requires any forbidden action (directly or indirectly)
+                        val requiredActions = extractRequiredActions(existingAction.preconditions)
+                        if (requiredActions.any { actionId -> forbiddenActions.contains(actionId) }) {
+                            conflictingGoals.add(existingGoal)
+                        }
+                        
+                        // Also check the reverse: if the new goal requires actions forbidden by existing goals
+                        val existingForbiddenActions = extractForbiddenActions(existingAction.preconditions)
+                        val newRequiredActions = extractRequiredActions(newGoalAction.preconditions)
+                        if (newRequiredActions.any { actionId -> existingForbiddenActions.contains(actionId) }) {
+                            conflictingGoals.add(existingGoal)
+                        }
+                        
+                        // Check if the goals are directly mutually exclusive (both forbid each other's target)
+                        if (forbiddenActions.contains(existingGoal.targetId) || 
+                            existingForbiddenActions.contains(tempGoal.targetId)) {
+                            conflictingGoals.add(existingGoal)
+                        }
+                    }
+                }
+            }
+            
             AnalyzedSearchableGoal(
                 searchableGoal = searchableGoal,
-                isCompatible = analyzedGoal.achievability != GoalAchievability.UNACHIEVABLE
-            )
+                isCompatible = analyzedGoal.achievability != GoalAchievability.UNACHIEVABLE,
+                conflictingGoals = conflictingGoals.distinctBy { it.targetId }
+            ).also {
+                // Debug logging for conflict detection
+                if (conflictingGoals.isNotEmpty()) {
+                    println("DEBUG: Goal '${searchableGoal.name}' conflicts with: ${conflictingGoals.map { it.description }}")
+                }
+            }
         }
     }
+    
     
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -340,28 +442,35 @@ fun GoalSearchDialog(
                     items(searchResults) { analyzedSearchableGoal ->
                         val searchableGoal = analyzedSearchableGoal.searchableGoal
                         val isCompatible = analyzedSearchableGoal.isCompatible
+                        val conflictingGoals = analyzedSearchableGoal.conflictingGoals
+                        val hasConflicts = conflictingGoals.isNotEmpty()
                         
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .then(
-                                    if (isCompatible) Modifier.clickable {
+                                    if (isCompatible && !hasConflicts) Modifier.clickable {
                                         onGoalSelected(goalSearch.createGoalFromSearchable(searchableGoal))
                                     } else Modifier
                                 ),
                             colors = CardDefaults.cardColors(
-                                containerColor = if (isCompatible) 
-                                    MaterialTheme.colorScheme.surface 
-                                else 
-                                    MaterialTheme.colorScheme.surfaceVariant
-                            )
+                                containerColor = when {
+                                    !isCompatible -> MaterialTheme.colorScheme.surfaceVariant
+                                    hasConflicts -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+                                    else -> MaterialTheme.colorScheme.surface
+                                }
+                            ),
+                            border = if (hasConflicts && isCompatible) {
+                                androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+                            } else null
                         ) {
                             Row(
                                 modifier = Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.Top
                             ) {
                                 Column(
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     Text(
                                         text = searchableGoal.name,
@@ -379,19 +488,51 @@ fun GoalSearchDialog(
                                         else 
                                             MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                                     )
+                                    
                                     if (!isCompatible) {
                                         Text(
                                             text = "Incompatible with current run",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.error
                                         )
+                                    } else if (hasConflicts) {
+                                        Column(
+                                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Warning,
+                                                    contentDescription = "Conflicts",
+                                                    tint = MaterialTheme.colorScheme.error,
+                                                    modifier = Modifier.size(12.dp)
+                                                )
+                                                Text(
+                                                    text = "Would conflict with ${conflictingGoals.size} goal(s):",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.error
+                                                )
+                                            }
+                                            
+                                            // List conflicting goals
+                                            conflictingGoals.forEach { goal ->
+                                                Text(
+                                                    text = "• ${goal.description}",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.error,
+                                                    modifier = Modifier.padding(start = 8.dp)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                                 
-                                if (!isCompatible) {
+                                if (!isCompatible || hasConflicts) {
                                     Icon(
                                         Icons.Default.Warning,
-                                        contentDescription = "Incompatible",
+                                        contentDescription = if (!isCompatible) "Incompatible" else "Has conflicts",
                                         tint = MaterialTheme.colorScheme.error,
                                         modifier = Modifier.size(20.dp)
                                     )
