@@ -196,10 +196,22 @@ fun CategorizedGoalsList(
     analyzedGoals: List<AnalyzedGoal>,
     onRemoveGoal: (Goal) -> Unit
 ) {
-    val directlyAchievable = analyzedGoals.filter { it.achievability == GoalAchievability.DIRECTLY_ACHIEVABLE }
-    val achievable = analyzedGoals.filter { it.achievability == GoalAchievability.ACHIEVABLE }
-    val unachievable = analyzedGoals.filter { it.achievability == GoalAchievability.UNACHIEVABLE }
-    val completed = analyzedGoals.filter { it.achievability == GoalAchievability.COMPLETED }
+    // Sort each category appropriately
+    val directlyAchievable = analyzedGoals
+        .filter { it.achievability == GoalAchievability.DIRECTLY_ACHIEVABLE }
+        .sortedBy { it.goal.description }
+    
+    val achievable = analyzedGoals
+        .filter { it.achievability == GoalAchievability.ACHIEVABLE }
+        .sortedBy { it.requiredActions.size } // Sort by number of required actions (most achievable first)
+    
+    val unachievable = analyzedGoals
+        .filter { it.achievability == GoalAchievability.UNACHIEVABLE }
+        .sortedBy { it.goal.description }
+    
+    val completed = analyzedGoals
+        .filter { it.achievability == GoalAchievability.COMPLETED }
+        .sortedBy { it.goal.description }
     
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(8.dp)
