@@ -285,6 +285,22 @@ data class GameActionGraph private constructor(
         
         val inventory = preconditionEngine.getInventory(gameData, completedActionIds)
         
+        // Check if permanently blocked by ActionForbidden preconditions
+        val forbiddenActions = preconditionEngine.extractForbiddenActions(targetAction.preconditions)
+        val blockingActions = forbiddenActions.filter { forbiddenActionId ->
+            completedActionIds.contains(forbiddenActionId)
+        }
+
+        if (blockingActions.isNotEmpty()) {
+            // Goal is permanently blocked by completed actions
+            return CachedPathInfo(
+                isAchievable = false,
+                pathLength = -1,
+                path = null,
+                blockingActions = blockingActions
+            )
+        }
+
         // Check if directly achievable (preconditions already met)
         if (preconditionEngine.evaluate(targetAction.preconditions, completedActionIds, inventory)) {
             return CachedPathInfo(
@@ -298,12 +314,12 @@ data class GameActionGraph private constructor(
         // Calculate actual path using BFS
         return calculatePathUsingBFS(targetAction, preconditionEngine)
     }
-    
+
     private fun calculatePathUsingBFS(targetAction: GameAction, preconditionEngine: PreconditionEngine): CachedPathInfo {
         // Check if permanently blocked by forbidden actions
         val forbiddenActions = preconditionEngine.extractForbiddenActions(targetAction.preconditions)
         val blockingActions = forbiddenActions.filter { completedActionIds.contains(it) }
-        
+
         if (blockingActions.isNotEmpty()) {
             return CachedPathInfo(
                 isAchievable = false,
@@ -312,25 +328,25 @@ data class GameActionGraph private constructor(
                 blockingActions = blockingActions
             )
         }
-        
+
         // BFS to find shortest path
         val queue = mutableListOf<Pair<String, List<GameAction>>>() // (actionId, path to reach it)
         val visited = mutableSetOf<String>()
         val startInventory = preconditionEngine.getInventory(gameData, completedActionIds)
-        
+
         // Initialize with all currently available actions
         for (action in gameData.actions.values) {
-            if (!completedActionIds.contains(action.id) && 
+            if (!completedActionIds.contains(action.id) &&
                 preconditionEngine.evaluate(action.preconditions, completedActionIds, startInventory)) {
                 queue.add(action.id to emptyList())
                 visited.add(action.id)
             }
         }
-        
+
         while (queue.isNotEmpty()) {
             val (currentActionId, pathToReachIt) = queue.removeAt(0)
             val currentAction = gameData.actions[currentActionId] ?: continue
-            
+
             // Check if this action leads to our target
             if (currentActionId == targetAction.id) {
                 return CachedPathInfo(
@@ -340,22 +356,22 @@ data class GameActionGraph private constructor(
                     blockingActions = emptyList()
                 )
             }
-            
+
             // Simulate performing this action and see what becomes available
             val simulatedCompleted = completedActionIds + currentActionId
             val simulatedInventory = preconditionEngine.getInventory(gameData, simulatedCompleted)
-            
+
             for (nextAction in gameData.actions.values) {
-                if (!simulatedCompleted.contains(nextAction.id) && 
+                if (!simulatedCompleted.contains(nextAction.id) &&
                     !visited.contains(nextAction.id) &&
                     preconditionEngine.evaluate(nextAction.preconditions, simulatedCompleted, simulatedInventory)) {
-                    
+
                     queue.add(nextAction.id to (pathToReachIt + currentAction))
                     visited.add(nextAction.id)
                 }
             }
         }
-        
+
         // No path found
         return CachedPathInfo(
             isAchievable = false,
