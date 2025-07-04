@@ -65,6 +65,20 @@ data class Item(
     val description: String
 )
 
+enum class GoalAchievability {
+    DIRECTLY_ACHIEVABLE,  // Can be completed with currently available actions
+    ACHIEVABLE,          // Can still be achieved, but requires completing other actions first
+    UNACHIEVABLE,        // Cannot be achieved in this run (preconditions permanently blocked)
+    COMPLETED            // Goal has been completed (target action was executed)
+}
+
+data class AnalyzedGoal(
+    val goal: Goal,
+    val achievability: GoalAchievability,
+    val requiredActions: List<String> = emptyList(),  // Actions needed to make this goal achievable
+    val blockingActions: List<String> = emptyList()   // Actions that would make this goal unachievable
+)
+
 @Serializable
 data class GameRun(
     val gameId: String,

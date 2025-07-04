@@ -18,28 +18,27 @@ fun QuestBroApp() {
     val gameRepository = remember { GameRepository(fileRepository) }
     val gameDiscovery = remember { GameDiscovery() }
     val gameManager = remember { GameManager(gameDiscovery, gameRepository) }
-    val preconditionEngine = remember { PreconditionEngine() }
-    val pathAnalyzer = remember { PathAnalyzer(preconditionEngine) }
-    
     var gameData by remember { mutableStateOf<GameData?>(null) }
     var gameRun by remember { mutableStateOf<GameRun?>(null) }
-    var actionAnalyses by remember { mutableStateOf<List<ActionAnalysis>>(emptyList()) }
+    var gameActionGraph by remember { mutableStateOf<GameActionGraph?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showNewRunDialog by remember { mutableStateOf(false) }
     var availableGames by remember { mutableStateOf<List<AvailableGame>>(emptyList()) }
     var selectedGameId by remember { mutableStateOf("") }
     var newRunName by remember { mutableStateOf("") }
     
-    fun refreshAnalyses() {
+    LaunchedEffect(gameData, gameRun) {
         val data = gameData
         val run = gameRun
         if (data != null && run != null) {
-            actionAnalyses = pathAnalyzer.analyzeActions(data, run)
+            gameActionGraph = GameActionGraph.create(
+                gameData = data,
+                completedActions = run.completedActions,
+                goals = run.goals.toSet()
+            )
+        } else {
+            gameActionGraph = null
         }
-    }
-    
-    LaunchedEffect(gameData, gameRun) {
-        refreshAnalyses()
     }
     
     MaterialTheme {
@@ -136,11 +135,10 @@ fun QuestBroApp() {
             }
             
             // Main content
-            if (gameData != null && gameRun != null) {
+            if (gameData != null && gameRun != null && gameActionGraph != null) {
                 QuestBroContent(
                     gameData = gameData!!,
-                    gameRun = gameRun!!,
-                    actionAnalyses = actionAnalyses,
+                    gameActionGraph = gameActionGraph!!,
                     onActionToggle = { actionId ->
                         val currentRun = gameRun!!
                         gameRun = if (currentRun.completedActions.contains(actionId)) {

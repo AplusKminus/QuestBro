@@ -15,31 +15,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.questbro.domain.*
 
-// Helper functions for conflict detection
-private fun extractForbiddenActions(expression: PreconditionExpression): Set<String> {
-    return when (expression) {
-        is PreconditionExpression.ActionForbidden -> setOf(expression.actionId)
-        is PreconditionExpression.And -> expression.expressions.flatMap { extractForbiddenActions(it) }.toSet()
-        is PreconditionExpression.Or -> expression.expressions.flatMap { extractForbiddenActions(it) }.toSet()
-        else -> emptySet()
-    }
-}
-
-private fun extractRequiredActions(expression: PreconditionExpression): Set<String> {
-    return when (expression) {
-        is PreconditionExpression.ActionRequired -> setOf(expression.actionId)
-        is PreconditionExpression.And -> expression.expressions.flatMap { extractRequiredActions(it) }.toSet()
-        is PreconditionExpression.Or -> expression.expressions.flatMap { extractRequiredActions(it) }.toSet()
-        else -> emptySet()
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuestBroContent(
     gameData: GameData,
-    gameRun: GameRun,
-    actionAnalyses: List<ActionAnalysis>,
+    gameActionGraph: GameActionGraph,
     onActionToggle: (String) -> Unit,
     onAddGoal: (Goal) -> Unit,
     onRemoveGoal: (Goal) -> Unit
@@ -48,10 +29,43 @@ fun QuestBroContent(
     var showGoalSearch by remember { mutableStateOf(false) }
     
     // Initialize goal-related objects
-    val goalAnalyzer = remember { GoalAnalyzer(PreconditionEngine()) }
     val goalSearch = remember { GoalSearch() }
     val searchableGoals = remember(gameData) { goalSearch.createSearchableGoals(gameData) }
-    val analyzedGoals = remember(gameData, gameRun) { goalAnalyzer.analyzeGoals(gameData, gameRun) }
+    
+    // Get categorized goals from GameActionGraph
+    val readyGoals = gameActionGraph.readyGoals
+    val achievableGoals = gameActionGraph.achievableGoals
+    val unachievableGoals = gameActionGraph.unachievableGoals
+    val completedGoals = gameActionGraph.completedGoals
+    
+    // Convert to AnalyzedGoal format for UI compatibility
+    val analyzedGoals = remember(readyGoals, achievableGoals, unachievableGoals, completedGoals) {
+        readyGoals.map { goalInfo ->
+            AnalyzedGoal(
+                goal = goalInfo.goal,
+                achievability = GoalAchievability.DIRECTLY_ACHIEVABLE,
+                requiredActions = goalInfo.path?.map { it.id } ?: emptyList()
+            )
+        } + achievableGoals.map { goalInfo ->
+            AnalyzedGoal(
+                goal = goalInfo.goal,
+                achievability = GoalAchievability.ACHIEVABLE,
+                requiredActions = goalInfo.path?.map { it.id } ?: emptyList()
+            )
+        } + unachievableGoals.map { goalInfo ->
+            AnalyzedGoal(
+                goal = goalInfo.goal,
+                achievability = GoalAchievability.UNACHIEVABLE,
+                requiredActions = emptyList()
+            )
+        } + completedGoals.map { goalInfo ->
+            AnalyzedGoal(
+                goal = goalInfo.goal,
+                achievability = GoalAchievability.COMPLETED,
+                requiredActions = emptyList()
+            )
+        }
+    }
     Row(
         modifier = Modifier.fillMaxSize(),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -71,7 +85,7 @@ fun QuestBroContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Goals (${gameRun.goals.size})",
+                        text = "Goals (${analyzedGoals.size})",
                         style = MaterialTheme.typography.titleMedium
                     )
                     
@@ -118,9 +132,9 @@ fun QuestBroContent(
                 ) {
                     Text(
                         text = if (showCompleted) 
-                            "Completed Actions (${gameRun.completedActions.size})"
+                            "Completed Actions (${gameActionGraph.completedActions.size})"
                         else 
-                            "Available Actions (${actionAnalyses.count { it.isAvailable && !gameRun.completedActions.contains(it.action.id) }})",
+                            "Available Actions (${gameActionGraph.currentActions.size})",
                         style = MaterialTheme.typography.titleMedium
                     )
                     
@@ -155,18 +169,18 @@ fun QuestBroContent(
                 ) {
                     if (showCompleted) {
                         // Show completed actions with undo option
-                        items(actionAnalyses.filter { gameRun.completedActions.contains(it.action.id) }) { analysis ->
+                        items(gameActionGraph.completedActions) { completedAction ->
                             CompletedActionCard(
-                                analysis = analysis,
-                                onUndo = { onActionToggle(analysis.action.id) }
+                                completedAction = completedAction,
+                                onUndo = { onActionToggle(completedAction.action.id) }
                             )
                         }
                     } else {
                         // Show only available, uncompleted actions
-                        items(actionAnalyses.filter { it.isAvailable && !gameRun.completedActions.contains(it.action.id) }) { analysis ->
+                        items(gameActionGraph.currentActions) { availableAction ->
                             AvailableActionCard(
-                                analysis = analysis,
-                                onComplete = { onActionToggle(analysis.action.id) }
+                                availableAction = availableAction,
+                                onComplete = { onActionToggle(availableAction.action.id) }
                             )
                         }
                     }
@@ -177,9 +191,8 @@ fun QuestBroContent(
             if (showGoalSearch) {
                 GoalSearchDialog(
                     searchableGoals = searchableGoals,
-                    existingGoals = gameRun.goals,
+                    gameActionGraph = gameActionGraph,
                     gameData = gameData,
-                    gameRun = gameRun,
                     onGoalSelected = { goal ->
                         onAddGoal(goal)
                         showGoalSearch = false
@@ -374,17 +387,17 @@ fun AnalyzedGoalCard(
 @Composable
 fun GoalSearchDialog(
     searchableGoals: List<SearchableGoal>,
-    existingGoals: List<Goal>,
+    gameActionGraph: GameActionGraph,
     gameData: GameData,
-    gameRun: GameRun,
     onGoalSelected: (Goal) -> Unit,
     onDismiss: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val goalSearch = remember { GoalSearch() }
-    val goalAnalyzer = remember { GoalAnalyzer(PreconditionEngine()) }
-    val existingTargetIds = remember(existingGoals) {
-        existingGoals.map { it.targetId }.toSet()
+    val existingTargetIds = remember(gameActionGraph) {
+        (gameActionGraph.readyGoals + gameActionGraph.achievableGoals + 
+         gameActionGraph.unachievableGoals + gameActionGraph.completedGoals)
+            .map { it.goal.targetId }.toSet()
     }
     
     data class AnalyzedSearchableGoal(
@@ -393,7 +406,7 @@ fun GoalSearchDialog(
         val conflictingGoals: List<Goal>
     )
     
-    val searchResults = remember(searchQuery, searchableGoals, existingTargetIds, gameRun) {
+    val searchResults = remember(searchQuery, searchableGoals, existingTargetIds, gameActionGraph) {
         val filteredGoals = searchableGoals.filter { searchableGoal ->
             !existingTargetIds.contains(searchableGoal.targetId)
         }
@@ -402,52 +415,24 @@ fun GoalSearchDialog(
         // Analyze compatibility and conflicts for each goal
         searchedGoals.map { searchableGoal ->
             val tempGoal = goalSearch.createGoalFromSearchable(searchableGoal)
-            val analyzedGoal = goalAnalyzer.analyzeGoal(
-                tempGoal,
-                gameData,
-                gameRun.completedActions,
-                PreconditionEngine().getInventory(gameData, gameRun.completedActions)
-            )
             
-            // Check for conflicts by analyzing which existing goals would be affected when adding this new goal
-            val conflictingGoals = mutableListOf<Goal>()
-            
-            // Use PathAnalyzer to determine which actions would break existing goals when the new goal is present
-            val simulatedGameRun = gameRun.copy(goals = gameRun.goals + tempGoal)
-            val pathAnalyzer = PathAnalyzer(PreconditionEngine())
-            val actionAnalyses = pathAnalyzer.analyzeActions(gameData, simulatedGameRun)
-            
-            // Find actions that would break existing goals and check if they're required for the new goal
-            for (analysis in actionAnalyses) {
-                if (analysis.isAvailable) {
-                    // Check if this action would break any existing goals
-                    val brokenExistingGoals = analysis.wouldBreakGoals.filter { brokenGoal ->
-                        // Only count goals that were in the original game run (not the new goal itself)
-                        gameRun.goals.any { it.targetId == brokenGoal.targetId }
-                    }
-                    
-                    // Check if this action is required for the new goal
-                    val isRequiredForNewGoal = analysis.requiredForGoals.any { requiredGoal ->
-                        requiredGoal.targetId == tempGoal.targetId
-                    }
-                    
-                    // If the action is required for the new goal and breaks existing goals, those are conflicts
-                    if (isRequiredForNewGoal && brokenExistingGoals.isNotEmpty()) {
-                        conflictingGoals.addAll(brokenExistingGoals)
-                    }
+            // Check for conflicts using GameActionGraph
+            val conflicts = gameActionGraph.checkConflictsWhenAddingGoal(tempGoal)
+            val conflictingGoals = conflicts.flatMap { conflict ->
+                when (conflict.severity) {
+                    ConflictSeverity.MutualExclusion -> conflict.involvedGoals.filter { it.id != tempGoal.id }
+                    ConflictSeverity.InducedConflict -> conflict.involvedGoals.filter { it.id != tempGoal.id }
                 }
             }
+            
+            // Check if goal would be achievable by checking if it exists in achievable actions
+            val isCompatible = gameData.actions.containsKey(tempGoal.targetId)
             
             AnalyzedSearchableGoal(
                 searchableGoal = searchableGoal,
-                isCompatible = analyzedGoal.achievability != GoalAchievability.UNACHIEVABLE,
+                isCompatible = isCompatible,
                 conflictingGoals = conflictingGoals.distinctBy { it.targetId }
-            ).also {
-                // Debug logging for conflict detection
-                if (conflictingGoals.isNotEmpty()) {
-                    println("DEBUG: Goal '${searchableGoal.name}' conflicts with: ${conflictingGoals.map { it.description }}")
-                }
-            }
+            )
         }
     }
     
@@ -587,15 +572,15 @@ fun GoalSearchDialog(
 
 @Composable
 fun AvailableActionCard(
-    analysis: ActionAnalysis,
+    availableAction: AvailableAction,
     onComplete: () -> Unit
 ) {
-    val action = analysis.action
+    val action = availableAction.action
     
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = if (analysis.wouldBreakGoals.isNotEmpty()) 
+            containerColor = if (availableAction.blocksGoals.isNotEmpty()) 
                 MaterialTheme.colorScheme.errorContainer 
             else 
                 MaterialTheme.colorScheme.surface
@@ -641,7 +626,7 @@ fun AvailableActionCard(
                     )
                 }
                 
-                if (analysis.wouldBreakGoals.isNotEmpty()) {
+                if (availableAction.blocksGoals.isNotEmpty()) {
                     Column(
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
@@ -656,14 +641,14 @@ fun AvailableActionCard(
                                 modifier = Modifier.size(16.dp)
                             )
                             Text(
-                                text = "Would block ${analysis.wouldBreakGoals.size} goal(s):",
+                                text = "Would block ${availableAction.blocksGoals.size} goal(s):",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error
                             )
                         }
                         
                         // List the specific goals that would be blocked
-                        analysis.wouldBreakGoals.forEach { goal ->
+                        availableAction.blocksGoals.forEach { goal ->
                             Text(
                                 text = "• ${goal.description}",
                                 style = MaterialTheme.typography.bodySmall,
@@ -674,7 +659,7 @@ fun AvailableActionCard(
                     }
                 }
                 
-                if (analysis.requiredForGoals.isNotEmpty()) {
+                if (availableAction.enablesGoals.isNotEmpty()) {
                     Column(
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
@@ -689,14 +674,14 @@ fun AvailableActionCard(
                                 modifier = Modifier.size(16.dp)
                             )
                             Text(
-                                text = "Required for ${analysis.requiredForGoals.size} goal(s):",
+                                text = "Required for ${availableAction.enablesGoals.size} goal(s):",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
                         
                         // List the specific goals this action is required for
-                        analysis.requiredForGoals.forEach { goal ->
+                        availableAction.enablesGoals.keys.forEach { goal ->
                             Text(
                                 text = "• ${goal.description}",
                                 style = MaterialTheme.typography.bodySmall,
@@ -724,10 +709,10 @@ fun AvailableActionCard(
 
 @Composable
 fun CompletedActionCard(
-    analysis: ActionAnalysis,
+    completedAction: CompletedAction,
     onUndo: () -> Unit
 ) {
-    val action = analysis.action
+    val action = completedAction.action
     
     Card(
         modifier = Modifier.fillMaxWidth(),
