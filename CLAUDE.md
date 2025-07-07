@@ -60,11 +60,14 @@ Game data and runs are stored as JSON files. Game data is in `data/games/elden-r
 ## Testing
 
 ### Test Suite
-QuestBro has a comprehensive test suite with 5 test classes containing 63 tests:
+QuestBro has a comprehensive test suite with 8 test classes containing 90 tests:
 - **PreconditionEngineTest**: Tests complex boolean logic evaluation
+- **PreconditionEngineAdvancedTest**: Tests edge cases and performance scenarios
 - **GameActionGraphTest**: Tests action availability and goal analysis
+- **ConflictDetectionTest**: Tests goal conflict detection and resolution
 - **GoalSearchTest**: Tests goal discovery and search functionality
 - **GameRepositoryLogicTest**: Tests data persistence and loading
+- **GameDataValidationTest**: Tests data integrity and validation
 - **IntegrationTest**: Tests complete workflows and complex scenarios
 
 ### Running Tests
@@ -80,9 +83,9 @@ open build/reports/tests/desktopTest/index.html
 ```
 
 ### Test Status
-- ✅ 56 tests passing
-- ❌ 7 tests failing (GameActionGraph logic issues)
-- ❌ JS tests have compatibility issues (Thread/System not available in commonTest)
+- ✅ All 90 tests passing on desktop and web platforms
+- ✅ Cross-platform compatibility issues resolved
+- ✅ Comprehensive coverage including edge cases and complex scenarios
 
 ### Manual Testing
 Additional manual testing can be done by:
@@ -109,14 +112,13 @@ Additional manual testing can be done by:
 - Cross-platform UI with Compose Multiplatform
 - Game discovery and run management
 - Action sorting and progress tracking
-- Comprehensive test suite (5 test classes, 63 tests)
+- Comprehensive test suite (8 test classes, 90 tests)
 
 ### Known Issues
-- 7 tests failing in GameActionGraph (path planning logic)
-- JS tests have compatibility issues (Thread/System not available)
-- Web platform needs optimization
+- Web platform performance could be optimized further
+- Additional game data would enhance testing scenarios
 
 ### Next Steps
-- Fix failing GameActionGraph tests
-- Resolve cross-platform test compatibility
 - Optimize web platform performance
+- Add more comprehensive game data sets
+- Implement additional UI features

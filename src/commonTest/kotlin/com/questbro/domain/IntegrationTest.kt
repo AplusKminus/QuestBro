@@ -354,11 +354,12 @@ class IntegrationTest {
         )
         
         // This should complete without performance issues
-        val startTime = System.currentTimeMillis()
+        val startTime = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
         val gameActionGraph = GameActionGraph.create(complexGameData, gameRun.completedActions, gameRun.goals.toSet())
-        val endTime = System.currentTimeMillis()
+        val endTime = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
         
         // Basic performance check (should complete quickly)
+        // Use kotlinx-datetime for cross-platform compatibility
         assertTrue(
             endTime - startTime < 1000,
             "Analysis should complete within 1 second even with many goals"

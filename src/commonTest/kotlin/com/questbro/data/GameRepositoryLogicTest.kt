@@ -88,8 +88,11 @@ class GameRepositoryLogicTest {
             lastModified = originalTime
         )
         
-        // Wait a moment to ensure timestamp difference
-        Thread.sleep(10)
+        // Wait a moment to ensure timestamp difference (cross-platform compatible)
+        val start = Clock.System.now().toEpochMilliseconds()
+        while (Clock.System.now().toEpochMilliseconds() - start < 10) {
+            // Busy wait for small delay
+        }
         
         // Simulate GameRepository.updateRun logic
         val beforeUpdate = Clock.System.now().toEpochMilliseconds()
@@ -176,7 +179,11 @@ class GameRepositoryLogicTest {
             lastModified = now1
         )
         
-        Thread.sleep(10) // Ensure different timestamps
+        // Ensure different timestamps (cross-platform compatible)
+        val delay1Start = Clock.System.now().toEpochMilliseconds()
+        while (Clock.System.now().toEpochMilliseconds() - delay1Start < 10) {
+            // Busy wait for small delay
+        }
         
         val now2 = Clock.System.now().toEpochMilliseconds()
         val run2 = GameRun(
@@ -212,8 +219,11 @@ class GameRepositoryLogicTest {
             lastModified = Clock.System.now().toEpochMilliseconds()
         )
         
-        // Wait a moment to ensure timestamp difference
-        Thread.sleep(10)
+        // Wait a moment to ensure timestamp difference (cross-platform compatible)
+        val start = Clock.System.now().toEpochMilliseconds()
+        while (Clock.System.now().toEpochMilliseconds() - start < 10) {
+            // Busy wait for small delay
+        }
         
         // Add completed action
         val withAction = initialRun.copy(
@@ -224,8 +234,11 @@ class GameRepositoryLogicTest {
         assertEquals(setOf("action1"), withAction.completedActions, "Should update completed actions")
         assertTrue(withAction.lastModified > initialRun.lastModified, "Should update timestamp")
         
-        // Wait a moment to ensure another timestamp difference
-        Thread.sleep(10)
+        // Wait a moment to ensure another timestamp difference (cross-platform compatible)
+        val delay2Start = Clock.System.now().toEpochMilliseconds()
+        while (Clock.System.now().toEpochMilliseconds() - delay2Start < 10) {
+            // Busy wait for small delay
+        }
         
         // Add goal
         val withGoal = withAction.copy(
