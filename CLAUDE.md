@@ -55,17 +55,68 @@ src/
 - **FileRepository**: Platform-specific file I/O (expect/actual pattern)
 
 ### Data Format
-Game data and runs are stored as JSON files. Sample data is in `data/elden-ring-sample.json`.
+Game data and runs are stored as JSON files. Game data is in `data/games/elden-ring.json`.
 
 ## Testing
-Currently no automated tests are implemented. Manual testing is done by:
-1. Loading the sample Elden Ring data file
-2. Creating a new run
-3. Marking actions as completed
-4. Observing availability and conflict detection
+
+### Test Suite
+QuestBro has a comprehensive test suite with 5 test classes containing 63 tests:
+- **PreconditionEngineTest**: Tests complex boolean logic evaluation
+- **GameActionGraphTest**: Tests action availability and goal analysis
+- **GoalSearchTest**: Tests goal discovery and search functionality
+- **GameRepositoryLogicTest**: Tests data persistence and loading
+- **IntegrationTest**: Tests complete workflows and complex scenarios
+
+### Running Tests
+```bash
+# Run desktop tests
+./gradlew desktopTest
+
+# Run all tests and checks
+./gradlew check
+
+# View test reports
+open build/reports/tests/desktopTest/index.html
+```
+
+### Test Status
+- ✅ 56 tests passing
+- ❌ 7 tests failing (GameActionGraph logic issues)
+- ❌ JS tests have compatibility issues (Thread/System not available in commonTest)
+
+### Manual Testing
+Additional manual testing can be done by:
+1. Creating a new run with the Elden Ring game data
+2. Marking actions as completed
+3. Adding goals and observing conflict detection
+4. Testing save/load functionality
 
 ## Common Development Tasks
 
 - **Adding new actions**: Update the JSON data file with new action definitions
 - **Modifying UI**: Edit files in `src/commonMain/kotlin/com/questbro/ui/`
 - **Platform-specific features**: Add implementations in `desktopMain` or `jsMain`
+- **Running the application**: Use `./gradlew runDistributable` for desktop
+- **Building distributables**: Use `./gradlew createDistributable`
+- **Testing**: Use `./gradlew desktopTest` or `./gradlew check`
+
+## Current Development Status
+
+### Working Features
+- Core domain logic and models
+- Complex precondition evaluation with AND/OR logic
+- Goal management and conflict detection
+- Cross-platform UI with Compose Multiplatform
+- Game discovery and run management
+- Action sorting and progress tracking
+- Comprehensive test suite (5 test classes, 63 tests)
+
+### Known Issues
+- 7 tests failing in GameActionGraph (path planning logic)
+- JS tests have compatibility issues (Thread/System not available)
+- Web platform needs optimization
+
+### Next Steps
+- Fix failing GameActionGraph tests
+- Resolve cross-platform test compatibility
+- Optimize web platform performance

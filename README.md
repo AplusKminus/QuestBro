@@ -68,11 +68,18 @@ The system then:
 
 ```
 QuestBro/
-├── shared/           # Common business logic and data models
-├── desktop/          # Desktop-specific UI and platform code
-├── web/              # Web-specific UI and platform code
-├── data/             # Game data files (Elden Ring reference graph)
-└── docs/             # Documentation and examples
+├── src/
+│   ├── commonMain/    # Shared business logic and UI components
+│   │   ├── domain/    # Core game logic and models
+│   │   ├── data/      # Data access layer
+│   │   └── ui/        # Compose UI components
+│   ├── commonTest/    # Shared tests (5 test classes, 63 tests)
+│   ├── desktopMain/   # Desktop-specific implementations
+│   ├── jsMain/        # Web-specific implementations  
+│   └── webMain/       # Web platform code
+├── data/
+│   └── games/         # Game data files (Elden Ring)
+└── build/             # Build artifacts and test reports
 ```
 
 ## Development Philosophy
@@ -108,7 +115,7 @@ While initially focused on Elden Ring, the architecture supports:
 
 3. **Run the desktop application**
    ```bash
-   ./gradlew run
+   ./gradlew runDistributable
    ```
 
    Or create a distributable package:
@@ -117,37 +124,64 @@ While initially focused on Elden Ring, the architecture supports:
    # Find the executable in build/compose/binaries/main/app/
    ```
 
+4. **Run tests**
+   ```bash
+   ./gradlew desktopTest    # Desktop tests
+   ./gradlew check          # All tests and checks
+   ```
+
 ### Using the Application
 
-1. **Load Game Data**
-   - Click "Load Game Data" 
-   - Select the sample file: `data/elden-ring-sample.json`
-
-2. **Create a New Run**
+1. **Create a New Run**
    - Click "New Run" to start tracking your progress
-   - Or load an existing run with "Load Run"
+   - Select from available games (currently Elden Ring)
+   - Name your playthrough
 
-3. **Track Your Progress**
-   - Check off completed actions
+2. **Track Your Progress**
+   - Check off completed actions as you play
    - Available actions are automatically calculated based on preconditions
    - Actions that would break your goals are highlighted with warnings
 
-4. **Set Goals** *(Coming Soon)*
+3. **Set Goals**
    - Add action or item goals to get path recommendations
    - See which actions are required for your goals
+   - Get warnings about conflicting actions
 
-5. **Save Your Progress**
+4. **Save Your Progress**
    - Click "Save Run" to export your current state
    - Files are saved as JSON for easy sharing and backup
+   - Load existing runs with "Load Run"
 
 ### Sample Data
 
-The included `data/elden-ring-sample.json` contains a subset of Elden Ring's progression graph, including:
-- Early game exploration (Limgrave, Caelid)
-- Boss fights (Margit, Godrick, Radahn)
-- NPC questlines (Kenneth Haight, Ranni)
-- Complex preconditions (Altus Plateau access routes)
-- Goal conflicts (Radahn vs. Ranni questline timing)
+The included `data/games/elden-ring.json` contains Elden Ring's progression graph, including:
+- Boss fights and exploration
+- NPC questlines and dialogue
+- Complex preconditions and dependencies
+- Mutually exclusive choices
+- Goal conflicts and path planning
+
+## Development Status
+
+### Current Features
+- ✅ Core domain logic and models
+- ✅ Complex precondition evaluation
+- ✅ Goal management and conflict detection
+- ✅ Cross-platform file I/O
+- ✅ Compose Multiplatform UI
+- ✅ Game discovery and run management
+- ✅ Action sorting and progress tracking
+
+### Testing
+- ✅ Comprehensive test suite (5 test classes, 63 tests)
+- ⚠️ Some tests currently failing (GameActionGraph logic)
+- ⚠️ JS tests have compatibility issues
+- ✅ Desktop tests run successfully
+
+### Known Issues
+- GameActionGraph path planning needs refinement
+- Cross-platform test compatibility
+- Web platform needs optimization
 
 ## Contributing
 
