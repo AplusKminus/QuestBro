@@ -11,6 +11,7 @@ version = "1.0.0"
 repositories {
     mavenCentral()
     maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
+    maven("https://jitpack.io")
     google()
 }
 
@@ -47,6 +48,7 @@ kotlin {
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.8.1")
+                implementation("com.github.UnitTestBot.kosat:kosat:main-SNAPSHOT")
             }
         }
         
