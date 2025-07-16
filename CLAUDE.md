@@ -9,18 +9,19 @@ QuestBro is a Kotlin Multiplatform application for RPG navigation and path plann
 ## Technology Stack
 
 - **Language**: Kotlin Multiplatform
-- **UI Framework**: Compose Multiplatform (Desktop + Web)
+- **UI Framework**: Compose Multiplatform (Desktop)
 - **Serialization**: kotlinx.serialization
 - **Build Tool**: Gradle with Kotlin DSL
+- **SAT Solver**: KoSAT (pure Kotlin CDCL SAT solver)
 
 ## Development Commands
 
 ### Building the Project
 ```bash
-# Build all platforms
+# Build desktop application
 ./gradlew build
 
-# Build desktop application only
+# Build desktop JAR
 ./gradlew desktopJar
 
 # Run desktop application
@@ -38,7 +39,8 @@ src/
 │   ├── data/             # Data access and file I/O
 │   └── ui/               # Shared UI components
 ├── desktopMain/kotlin/   # Desktop-specific implementations
-└── jsMain/kotlin/        # Web-specific implementations (basic)
+│   └── sat/              # SAT solver integration (KoSAT)
+└── desktopTest/kotlin/   # Desktop-specific tests
 ```
 
 ## Core Architecture
@@ -98,7 +100,7 @@ Additional manual testing can be done by:
 
 - **Adding new actions**: Update the JSON data file with new action definitions
 - **Modifying UI**: Edit files in `src/commonMain/kotlin/com/questbro/ui/`
-- **Platform-specific features**: Add implementations in `desktopMain` or `jsMain`
+- **SAT solver features**: Add implementations in `src/desktopMain/kotlin/com/questbro/sat/`
 - **Running the application**: Use `./gradlew runDistributable` for desktop
 - **Building distributables**: Use `./gradlew createDistributable`
 - **Testing**: Use `./gradlew desktopTest` or `./gradlew check`
@@ -109,16 +111,18 @@ Additional manual testing can be done by:
 - Core domain logic and models
 - Complex precondition evaluation with AND/OR logic
 - Goal management and conflict detection
-- Cross-platform UI with Compose Multiplatform
+- Desktop UI with Compose Multiplatform
 - Game discovery and run management
 - Action sorting and progress tracking
-- Comprehensive test suite (8 test classes, 90 tests)
+- SAT-based goal compatibility analysis and undoability detection
+- Comprehensive test suite (11 test classes, 139 tests with 100% success rate)
 
 ### Known Issues
-- Web platform performance could be optimized further
 - Additional game data would enhance testing scenarios
+- SAT solver performance could be optimized for larger game graphs
 
 ### Next Steps
-- Optimize web platform performance
+- Enhance desktop UI with advanced SAT-based features
 - Add more comprehensive game data sets
-- Implement additional UI features
+- Implement SAT-based path optimization in the UI
+- Consider native distribution optimizations

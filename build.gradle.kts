@@ -17,14 +17,6 @@ repositories {
 
 kotlin {
     jvm("desktop")
-    js(IR) {
-        browser {
-            commonWebpackConfig {
-                outputFileName = "questbro.js"
-            }
-        }
-        binaries.executable()
-    }
 
     sourceSets {
         val commonMain by getting {
@@ -49,12 +41,6 @@ kotlin {
                 implementation(compose.desktop.currentOs)
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.8.1")
                 implementation("com.github.UnitTestBot.kosat:kosat:main-SNAPSHOT")
-            }
-        }
-        
-        val jsMain by getting {
-            dependencies {
-                implementation(compose.html.core)
             }
         }
     }
